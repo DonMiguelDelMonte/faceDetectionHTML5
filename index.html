@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<title>Face Detection en HTML5 :3</title>
+		<link rel="stylesheet" type="text/css" href="css/style.css">
+	</head>
+	<body>
+		<p id="info">Dale permiso a tu cámara para probar!!</p>
+		<select name="ojos" multiple="multiple">
+		  <option  selected="selected">0.- Bigote</option>
+		  <option>1.- Nariz de Payaso</option>
+		  <option>2.- Like a Sir</option>
+		  <option>3.- Ojotes</option>
+		</select>
+		<div id = "choose"></div>
+		<canvas id="output"></canvas>
+		<div id="footer">By <a href ="http://dudes.mx">Los Dudes</a></div>
+		<script src="ccv.js"></script>
+		<script src="face.js"></script>
+	        <script src="http://code.jquery.com/jquery-1.9.1.js"></script>
+		<script>
+		var posglass = 'img/glasses0.png';
+		$( "select" ).change(function () {
+			var str = "";
+			$( "select option:selected" ).each(function() {
+				str += $( this ).text() + " ";
+			});
+			$( "div#choose" ).text( str );
+			posglass = "img/glasses" + str.charAt(0) + ".png";
+		}).change();
+		(function() {
+			var i = 0,
+			lastTime = 0,
+			vendors = ['ms', 'moz', 'webkit', 'o'];
+			while (i < vendors.length && !window.requestAnimationFrame) {
+				window.requestAnimationFrame = window[vendors[i] + 'RequestAnimationFrame'];
+				i++;
+			}
+			
+			if (!window.requestAnimationFrame) {
+				window.requestAnimationFrame = function(callback, element) {
+					var currTime = new Date().getTime(),
+					timeToCall = Math.max(0, 1000 / 60 - currTime + lastTime),
+					id = setTimeout(function() { callback(currTime + timeToCall); }, timeToCall);	
+					lastTime = currTime + timeToCall;
+					return id;
+				};}}());
+				var App = {
+					start: function(stream) {
+						App.video.addEventListener('canplay', function() {
+							App.video.removeEventListener('canplay');
+							setTimeout(function() {
+								App.video.play();
+								App.canvas.style.display = 'inline';
+								App.info.style.display = 'none';
+								App.canvas.width = App.video.videoWidth;
+								App.canvas.height = App.video.videoHeight;
+								App.backCanvas.width = App.video.videoWidth / 4;
+								App.backCanvas.height = App.video.videoHeight / 4;
+								App.backContext = App.backCanvas.getContext('2d');
+								var w = 300 / 4 * 0.8,
+								h = 270 / 4 * 0.8;
+								App.comp = [{
+									x: (App.video.videoWidth / 4 - w) / 2,
+									y: (App.video.videoHeight / 4 - h) / 2,
+									width: w, 
+									height: h,
+								}];
+								App.drawToCanvas();
+							}, 500);
+						}, true);
+						var domURL = window.URL || window.webkitURL;
+						App.video.src = domURL ? domURL.createObjectURL(stream) : stream;
+					},
+					denied: function() {
+						App.info.innerHTML = 'Bloqueaste el acceso a tu cámara! :()<br><br>Dale permisos, refresca la página';
+					},
+					error: function(e) {
+						if (e) {
+							console.error(e);
+						}
+						App.info.innerHTML = 'Algo malo ve a about:flags en Google Chrome y activa el &quot;MediaStream&quot;';
+					},
+					drawToCanvas: function() {
+						requestAnimationFrame(App.drawToCanvas);
+						var video = App.video,
+						ctx = App.context,
+						backCtx = App.backContext,
+						m = 4,
+						w = 4,
+						i,
+						comp;
+						ctx.drawImage(video, 0, 0, App.canvas.width, App.canvas.height);		
+						backCtx.drawImage(video, 0, 0, App.backCanvas.width, App.backCanvas.height);
+						comp = ccv.detect_objects(App.ccv = App.ccv || {
+							canvas: App.backCanvas,
+							cascade: cascade,
+							interval: 4,
+							min_neighbors: 1
+						});
+						if (comp.length) {
+							App.comp = comp;
+						}
+						for (i = App.comp.length; i--; ) {
+							App.glasses.src = posglass;
+							ctx.drawImage(App.glasses, (App.comp[i].x - w / 2) * m, (App.comp[i].y - w / 2) * m, (App.comp[i].width + w) * m, (App.comp[i].height + w) * m);
+						}}};
+						App.glasses = new Image();
+						App.glasses.src = posglass;
+
+						App.init = function() {
+							App.video = document.createElement('video');
+							App.backCanvas = document.createElement('canvas');
+							App.canvas = document.querySelector('#output');
+							App.canvas.style.display = 'none';
+							App.context = App.canvas.getContext('2d');
+							App.info = document.querySelector('#info');
+							navigator.getUserMedia_ = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia;
+	
+							try {
+								navigator.getUserMedia_({
+									video: true,
+									audio: false
+								}, App.start, App.denied);
+							} catch (e) {
+								try {
+									navigator.getUserMedia_('video', App.start, App.denied);
+								} catch (e) {
+									App.error(e);
+								}
+							}
+							App.video.loop = App.video.muted = true;
+							App.video.load();
+						};
+						App.init();
+
+		</script>
+	</body>
+</html>
